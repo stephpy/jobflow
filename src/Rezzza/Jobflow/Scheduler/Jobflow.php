@@ -100,7 +100,9 @@ class Jobflow
         }
 
         $currentJob = $this->getJob()->get($this->jobGraph->current());
-        $input      = $currentJob->getOption('io')->stdin;
+        $execOptions = $currentJob->getExecOptions();
+
+        $input = (!isset($execOptions['io'])) ? null : $execOptions['io']->stdin;
 
         if ($input instanceof \Traversable) {
             foreach ($input as $data) {
@@ -108,7 +110,7 @@ class Jobflow
                     $this->getInitMessage($data)
                 );
             }
-        } elseif ($input instanceof Input) {
+        } else {
             $this->addMessage(
                 $this->getInitMessage($input)
             );

@@ -1,21 +1,17 @@
 <?php
 
-require_once __DIR__.'/init.php';
+require_once __DIR__.'/../vendor/autoload.php';
 
 use Rezzza\Jobflow\Jobs;
+use Rezzza\Jobflow\Extension;
 use Rezzza\Jobflow\Io;
 use Rezzza\Jobflow\Extension\ETL\Type;
-use Rezzza\Jobflow\Extension;
 
-// Create the JobFactory.
-// By default it comes with CoreExtension and ETLExtension
-// If you need to inject others extensions :
-//$builder = Jobs::createJobFactoryBuilder();
-// $builder->addExtension(nex MyExtension());
-$jobFactory = Jobs::createJobFactory();
-$jobflowFactory = Jobs::createJobflowFactory();
-
+$builder = Jobs::createJobsBuilder();
 $builder->addExtension(new Extension\Monolog\MonologExtension(new \Monolog\Logger('jobflow')));
+
+$jobflowFactory = $builder->getJobflowFactory();
+$jobFactory = Jobs::createJobFactory();
 
 // We will inject IO to our job to indicate where Extractor needs to read and where Loader needs to write
 $io = new Io\IoDescriptor(
@@ -36,7 +32,7 @@ $job = $jobFactory
             'io' => $io
         )
     )
-    /*->add(
+    ->add(
         'example_transformer', // name
         new Type\Transformer\CallbackTransformerType(), // or 'callback_transformer'
         array(
@@ -55,7 +51,7 @@ $job = $jobFactory
         array(
             'io' => $io
         )
-    )*/
+    )
     ->getJob() // builder create the Job with this method
 ;
 
