@@ -100,7 +100,7 @@ class Jobflow
         }
 
         $currentJob = $this->getJob()->get($this->jobGraph->current());
-        $input      = $currentJob->getExecOptions()['io']->stdin;
+        $input      = $currentJob->getOption('io')->stdin;
 
         if ($input instanceof \Traversable) {
             foreach ($input as $data) {
