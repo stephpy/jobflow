@@ -4,6 +4,7 @@ namespace Rezzza\Jobflow\Scheduler;
 
 use Psr\Log\LoggerInterface;
 
+use Rezzza\Jobflow\Io\Input;
 use Rezzza\Jobflow\JobContext;
 use Rezzza\Jobflow\JobInterface;
 use Rezzza\Jobflow\JobFactory;
@@ -98,9 +99,20 @@ class Jobflow
             throw new \RuntimeException('You need to set a job');
         }
 
-        $init = $this->getInitMessage();
+        $currentJob = $this->getJob()->get($this->jobGraph->current());
+        $input      = $currentJob->getExecOptions()['io']->stdin;
 
-        $this->addMessage($init);
+        if ($input instanceof \Traversable) {
+            foreach ($input as $data) {
+                $this->addMessage(
+                    $this->getInitMessage($data)
+                );
+            }
+        } elseif ($input instanceof Input) {
+            $this->addMessage(
+                $this->getInitMessage($input)
+            );
+        }
 
         return $this;
     }
@@ -149,12 +161,12 @@ class Jobflow
             }
 
             $this->logger->info(sprintf(
-                'Add new message for job [%s] : %s', 
+                'Add new message for job [%s] : %s',
                 $msg->context->getJobId(),
-                $step            
+                $step
             ));
         }
-        
+
         $this->transport->addMessage($msg);
 
         return $this;
@@ -173,7 +185,7 @@ class Jobflow
             return false;
         }
 
-        // We can get back the job from the msg. So job does not have to be set before. 
+        // We can get back the job from the msg. So job does not have to be set before.
         if (null === $this->job) {
             $this->setJobFromMessage($msg);
         }
@@ -247,7 +259,7 @@ class Jobflow
 
         $this->jobGraph->move($msg->context->getCurrent());
         $context = new ExecutionContext(
-            new JobInput($this->startMsg), 
+            new JobInput($this->startMsg),
             new JobOutput($endMsg)
         );
         $output = $context->executeJob($this->job);
@@ -306,7 +318,7 @@ class Jobflow
     /**
      * @return JobMessage
      */
-    private function getInitMessage()
+    private function getInitMessage(Input $input = null)
     {
         $msg = new JobMessage(
             new JobContext(
@@ -316,6 +328,7 @@ class Jobflow
             )
         );
 
+        $msg->context->setOption('input', $input);
         $msg->context->setOrigin($this->jobGraph->current());
         $msg->jobOptions = $this->getJob()->getOptions();
 

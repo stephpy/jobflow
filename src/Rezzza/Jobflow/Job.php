@@ -54,6 +54,9 @@ class Job implements \IteratorAggregate, JobInterface
     {
         // We inject msg as it could be used during job runtime configuration
         $options = $this->getExecOptions();
+        print "<pre>";
+        var_dump($options);
+        print "</pre>";
         $options['message'] = $context->getInput()->getMessage();
 
         // Runtime configuration (!= buildJob which is executed when we build job)
@@ -80,7 +83,7 @@ class Job implements \IteratorAggregate, JobInterface
             ;
         } elseif (is_callable($config)) {
             call_user_func_array(
-                $config, 
+                $config,
                 array(
                     $input,
                     $output,
