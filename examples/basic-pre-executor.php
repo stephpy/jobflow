@@ -5,18 +5,16 @@ require_once __DIR__.'/../vendor/autoload.php';
 use Rezzza\Jobflow\Jobs;
 use Rezzza\Jobflow\Io;
 use Rezzza\Jobflow\Extension\ETL\Type;
+use Rezzza\Jobflow\Extension;
 
-// Create the JobFactory.
-// By default it comes with CoreExtension and ETLExtension
-// If you need to inject others extensions :
-// $builder = $Jobs::createJobFactoryBuilder();
-// $builder->addExtension(nex MyExtension());
+$builder = Jobs::createJobsBuilder();
+$builder->addExtension(new Extension\Monolog\MonologExtension(new \Monolog\Logger('jobflow')));
+
+$jobflowFactory = $builder->getJobflowFactory();
 $jobFactory = Jobs::createJobFactory();
-$jobflowFactory = Jobs::createJobflowFactory();
 
-// We will inject IO to our job to indicate where Extractor needs to read and where Loader needs to write
 $io = new Io\IoDescriptor(
-    new Io\Input('file://'.__DIR__.'/fixtures.csv'),
+    null,
     new Io\Output('file:///'.__DIR__.'/temp/result.json')
 );
 
@@ -24,11 +22,18 @@ $io = new Io\IoDescriptor(
 $job = $jobFactory
     ->createBuilder('job') // 'job' is the JobType by default.
     ->add(
-        'example_extractor', // name
-        new Type\Extractor\CsvExtractorType(), // or you can use 'csv_extractor' as ETLExtension is loaded by default
+        'pre_executor',
+        'pre_executor',
         array(
-            'io' => $io
+            'input' => new Io\InputAggregator(array(
+                new Io\Input('file://'.__DIR__.'/fixtures.csv'),
+                new Io\Input('file://'.__DIR__.'/fixtures-om.csv'),
+            ))
         )
+    )
+    ->add(
+        'example_extractor', // name
+        new Type\Extractor\CsvExtractorType() // or you can use 'csv_extractor' as ETLExtension is loaded by default
     )
     ->add(
         'example_transformer', // name

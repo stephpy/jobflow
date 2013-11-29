@@ -31,7 +31,7 @@ class ExecutionContext
     /**
      * Global Context moved from message to message
      *
-     * @var JobContext
+     * @var GlobalContext
      */
     protected $globalContext;
 
@@ -50,7 +50,7 @@ class ExecutionContext
     {
         $this->input = $input;
         $this->output = $output;
-        $this->globalContext = $input->getMessage()->context;
+        $this->globalContext = $input->getMessage()->getGlobalContext();
     }
 
     /**
@@ -67,7 +67,7 @@ class ExecutionContext
         }
 
         $this->job = $parent->get($this->getCurrentJob());
-        
+
         return $this->job->execute($this);
     }
 
@@ -83,7 +83,7 @@ class ExecutionContext
 
     /**
      * Get name of the child job in execution
-     * 
+     *
      * @return string
      */
     public function getCurrentJob()

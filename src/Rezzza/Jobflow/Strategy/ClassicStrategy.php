@@ -10,7 +10,8 @@ class ClassicStrategy implements MessageStrategyInterface
 {
     public function handle(Jobflow $jobflow, JobMessage $msg)
     {
-        $current = $msg->context->getCurrent();
+        $globalContext = $msg->getGlobalContext();
+        $current = $globalContext->getCurrent();
 
         // Move graph to the current value
         $jobflow->getJobGraph()->move($current);
@@ -20,27 +21,27 @@ class ClassicStrategy implements MessageStrategyInterface
 
         if ($msg->pipe instanceof Pipe) {
             $jobflow->forwardPipeMessage($msg, $jobflow->getJobGraph());
-            
+
             // Reset pipe as we already ran through above
             $msg->pipe = array();
-        } 
+        }
 
         if (true === $child->getRequeue()) {
-            $msg->context->tick();
+            $globalContext->tick();
 
-            if (!$msg->context->isFinished()) {
-                $origin = $msg->context->getOrigin();
+            if (!$globalContext->isFinished()) {
+                $origin = $globalContext->getOrigin();
                 $jobflow->getJobGraph()->move($origin);
 
-                $msg->context->addStep($current);
-                $msg->context->setCurrent($origin);
+                $globalContext->addStep($current);
+                $globalContext->setCurrent($origin);
             } else {
                 $msg = null;
             }
         } elseif (!$jobflow->getJobGraph()->hasNextJob()) {
             $msg = null;
         } else {
-            $msg->context->updateToNextJob($jobflow->getJobGraph());
+            $globalContext->updateToNextJob($jobflow->getJobGraph());
         }
 
         if (null !== $msg) {

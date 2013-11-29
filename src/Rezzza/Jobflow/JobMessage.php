@@ -16,14 +16,19 @@ class JobMessage
 
     public $ended = false;
 
-    public function __construct($context)
+    /**
+     * @var JobOptions
+     */
+    protected $options;
+
+    public function __construct(JobOptions $options)
     {
-        $this->context = $context;
+        $this->options = $options;
     }
 
     public function __clone()
     {
-        $this->context = clone $this->context;
+        $this->options = clone $this->options;
     }
 
     public function reset()
@@ -34,8 +39,18 @@ class JobMessage
 
     public function getMetadata($name, $offset = 0)
     {
-        $offset = $offset + $this->context->getOption('offset');
+        $offset = $offset + $this->getGlobalContext()->getOption('offset');
 
         return $this->metadata[$name][$offset];
+    }
+
+    public function getOptions()
+    {
+        return $this->options;
+    }
+
+    public function getGlobalContext()
+    {
+        return $this->getOptions()->getGlobalContext();
     }
 }

@@ -16,7 +16,7 @@ class RabbitMqTransport implements TransportInterface
 
     public function addMessage(JobMessage $msg)
     {
-        $name = $msg->context->getMessageName().uniqid();
+        $name = $msg->getGlobalContext()->getMessageName().uniqid();
         $this->rpcClient->addRequest(serialize($msg), 'jobflow', $name);
     }
 

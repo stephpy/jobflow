@@ -14,7 +14,7 @@ class JobOutput extends JobStream
         if (null === $offset) {
             $this->message->data[] = $result;
         } else {
-            $this->message->data[$offset] = $result;            
+            $this->message->data[$offset] = $result;
         }
     }
 
@@ -32,9 +32,9 @@ class JobOutput extends JobStream
 
     public function setContextFromInput(JobInput $input)
     {
-        $options = $input->getMessage()->context->getOptions();
+        $options = $input->getMessage()->getGlobalContext()->getOptions();
 
-        $this->message->context->setOptions($options);
+        $this->message->getGlobalContext()->setOptions($options);
     }
 
     public function setData($data)

@@ -4,8 +4,8 @@ namespace Rezzza\Jobflow\Scheduler;
 
 use Psr\Log\LoggerInterface;
 
-use Rezzza\Jobflow\Io\Input;
-use Rezzza\Jobflow\JobContext;
+use Rezzza\Jobflow\JobOptions;
+use Rezzza\Jobflow\GlobalContext;
 use Rezzza\Jobflow\JobInterface;
 use Rezzza\Jobflow\JobFactory;
 use Rezzza\Jobflow\JobMessage;
@@ -156,15 +156,15 @@ class Jobflow
     public function addMessage(JobMessage $msg)
     {
         if ($this->logger) {
-            if (null === $msg->context->getCurrent()) {
+            if (null === $msg->getGlobalContext()->getCurrent()) {
                 $step = 'starting';
             } else {
-                $step = 'step '.$msg->context->getCurrent();
+                $step = 'step '.$msg->getGlobalContext()->getCurrent();
             }
 
             $this->logger->info(sprintf(
                 'Add new message for job [%s] : %s',
-                $msg->context->getJobId(),
+                $msg->getGlobalContext()->getJobId(),
                 $step
             ));
         }
@@ -193,11 +193,13 @@ class Jobflow
         }
 
         if ($this->logger) {
+            $globalContext = $msg->getGlobalContext();
+
             $this->logger->info(sprintf(
                 'Read message for job [%s] : %s => %s',
-                $msg->context->getJobId(),
-                $msg->context->getCurrent(),
-                json_encode($msg->context->getOptions())
+                $globalContext->getJobId(),
+                $globalContext->getCurrent(),
+                json_encode($globalContext->getOptions())
             ));
         }
 
@@ -259,7 +261,7 @@ class Jobflow
         $endMsg = clone $msg;
         $endMsg->reset();
 
-        $this->jobGraph->move($msg->context->getCurrent());
+        $this->jobGraph->move($msg->getGlobalContext()->getCurrent());
         $context = new ExecutionContext(
             new JobInput($this->startMsg),
             new JobOutput($endMsg)
@@ -276,7 +278,42 @@ class Jobflow
             return null;
         }
 
-        return $output->getMessage();
+        $message = $output->getMessage();
+
+        //@todo edit it. Looking for data to find InputAggregator is weird ...
+        if ($message->data instanceof \Rezzza\Jobflow\Io\InputAggregator) {
+            if (!$this->jobGraph->hasNextJob()) {
+                return $message;
+            }
+
+            $iterator = $message->data->getIterator();
+            $current  = $iterator->current();
+            $iterator->next();
+
+            $nextJobName = $this->jobGraph->getNextJob();
+            $nextJob = $this->getJob()->get($nextJobName);
+            $nextJob->getConfig()->setExecOptions(array(
+                'io' => new \Rezzza\Jobflow\Io\IoDescriptor($current)
+            ));
+
+            while ($current = $iterator->current()) {
+                $msg = new JobMessage(
+                    new JobOptions(
+                        new GlobalContext(
+                            $nextJobName,
+                            array(),
+                            $nextJobName
+                        )
+                    )
+                );
+                $msg->getOptions()->setExec('io', new \Rezzza\Jobflow\Io\IoDescriptor($current));
+
+                $this->addMessage($msg);
+                $iterator->next();
+            }
+        }
+
+        return $message;
     }
 
     /**
@@ -286,7 +323,7 @@ class Jobflow
      */
     public function setJobFromMessage(JobMessage $msg)
     {
-        $job = $this->createJob($msg->context->getJobId(), $msg->jobOptions);
+        $job = $this->createJob($msg->getGlobalContext()->getJobId(), $msg->jobOptions);
 
         return $this->setJob($job);
     }
@@ -296,10 +333,10 @@ class Jobflow
         foreach ($msg->pipe->params as $pipe) {
             $graph = clone $graph;
             $forward = clone $msg;
-            $forward->context->initOptions();
             $forward->pipe = $pipe;
-            $forward->context->updateToNextJob($graph);
-            $forward->context->setOrigin($forward->context->getCurrent());
+            $forward->getGlobalContext()->initOptions();
+            $forward->getGlobalContext()->updateToNextJob($graph);
+            $forward->getGlobalContext()->setOrigin($forward->getGlobalContext()->getCurrent());
             $this->addMessage($forward);
         }
     }
@@ -323,15 +360,16 @@ class Jobflow
     private function getInitMessage(Input $input = null)
     {
         $msg = new JobMessage(
-            new JobContext(
-                $this->getJob()->getName(),
-                $this->getJob()->getConfig()->getOption('context', array()),
-                $this->jobGraph->current()
+            new JobOptions(
+                new GlobalContext(
+                    $this->getJob()->getName(),
+                    $this->getJob()->getConfig()->getOption('context', array()),
+                    $this->jobGraph->current()
+                )
             )
         );
 
-        $msg->context->setOption('input', $input);
-        $msg->context->setOrigin($this->jobGraph->current());
+        $msg->getGlobalContext()->setOrigin($this->jobGraph->current());
         $msg->jobOptions = $this->getJob()->getOptions();
 
         return $msg;

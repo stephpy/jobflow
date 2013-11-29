@@ -9,7 +9,8 @@ class CoreExtension extends BaseExtension
     public function loadTypes()
     {
         return array(
-            new Type\JobType()
+            new Type\JobType(),
+            new Type\PreExecutorType(),
         );
     }
 

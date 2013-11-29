@@ -12,7 +12,7 @@ use Rezzza\Jobflow\Scheduler\JobGraph;
  *
  * @author Timothée Barray <tim@amicalement-web.net>
  */
-class JobContext implements JobContextInterface
+class GlobalContext implements GlobalContextInterface
 {
     /**
      * The job we run
@@ -118,7 +118,7 @@ class JobContext implements JobContextInterface
      * @param mixed $key
      * @param mixed $value
      *
-     * @return JobContext
+     * @return GlobalContext
      */
     public function setOption($key, $value)
     {
@@ -148,7 +148,7 @@ class JobContext implements JobContextInterface
     }
 
     /**
-     * Checks if JobContext has already traveled
+     * Checks if GlobalContext has already traveled
      *
      * @return boolean
      */
